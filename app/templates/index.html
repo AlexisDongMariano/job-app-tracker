@@ -8,6 +8,34 @@
         <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;">
             <h1>Job Application Tracker</h1>
 
+            <h2>Add application</h2>
+
+            <form method="post" action="/applications">
+                <div>
+                <label>Company</label><br />
+                <input type="text" name="company" required />
+                </div>
+
+                <div>
+                <label>Role</label><br />
+                <input type="text" name="role" required />
+                </div>
+
+                <div>
+                <label>Status</label><br />
+                <select name="status">
+                    <option>Applied</option>
+                    <option>Interview</option>
+                    <option>Offer</option>
+                    <option>Rejected</option>
+                </select>
+                </div>
+
+                <button type="submit">Add</button>
+            </form>
+
+            <hr />
+
             <p>This will list your applications.</p>
 
             {% if job_applications|length == 0 %}
