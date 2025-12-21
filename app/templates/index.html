@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width", initial-scale="1">
+        <title>Job App Tracker</title>
+    </head>
+    <body>
+        <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;">
+            <h1>Job Application Tracker</h1>
+
+            <p>This will list your applications.</p>
+
+            {% if job_applications|length == 0 %}
+                <p><em>No applications yet.</em></p>
+            {% else %}
+                <ul>
+                    {% for j in job_applications %}
+                    <li>{{ j.company }} - {{ j.role }} {{ j.status }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </main>
+    </body>
+</html>
