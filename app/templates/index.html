@@ -1,27 +1,29 @@
 <html>
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width", initial-scale="1">
-        <title>Job App Tracker</title>
-    </head>
-    <body>
-        <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;">
-            <h1>Job Application Tracker</h1>
 
-            <h2>Add application</h2>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" , initial-scale="1">
+    <title>Job App Tracker</title>
+</head>
 
-            <form method="post" action="/applications">
-                <div>
+<body>
+    <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;">
+        <h1>Job Application Tracker</h1>
+
+        <h2>Add application</h2>
+
+        <form method="post" action="/applications">
+            <div>
                 <label>Company</label><br />
                 <input type="text" name="company" required />
-                </div>
+            </div>
 
-                <div>
+            <div>
                 <label>Role</label><br />
                 <input type="text" name="role" required />
-                </div>
+            </div>
 
-                <div>
+            <div>
                 <label>Status</label><br />
                 <select name="status">
                     <option>Applied</option>
@@ -29,24 +31,44 @@
                     <option>Offer</option>
                     <option>Rejected</option>
                 </select>
-                </div>
+            </div>
 
-                <button type="submit">Add</button>
-            </form>
+            <button type="submit">Add</button>
+        </form>
 
-            <hr />
+        <hr />
 
-            <p>This will list your applications.</p>
+        <p>This will list your applications.</p>
 
-            {% if job_applications|length == 0 %}
-                <p><em>No applications yet.</em></p>
-            {% else %}
-                <ul>
-                    {% for j in job_applications %}
-                    <li>{{ j.company }} - {{ j.role }} {{ j.status }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </main>
-    </body>
+        {% if job_applications|length == 0 %}
+        <p><em>No applications yet.</em></p>
+        {% else %}
+        <ul>
+            {% for app in job_applications %}
+            <li style="margin-bottom: 12px;">
+                <strong>{{ app.company }}</strong> — {{ app.role }}
+                <em>({{ app.status }})</em>
+
+                <form method="post" action="/applications/{{ app.id }}/status" style="display:inline;">
+                    <select name="status">
+                        <option {% if app.status=="Applied" %}selected{% endif %}>Applied</option>
+                        <option {% if app.status=="Interview" %}selected{% endif %}>Interview</option>
+                        <option {% if app.status=="Offer" %}selected{% endif %}>Offer</option>
+                        <option {% if app.status=="Rejected" %}selected{% endif %}>Rejected</option>
+                    </select>
+                    <button type="submit">Update</button>
+                </form>
+
+                <form method="post" action="/applications/{{ app.id }}/delete"
+                    style="display:inline; margin-left: 6px;">
+                    <button type="submit">Delete</button>
+                </form>
+            </li>
+
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </main>
+</body>
+
 </html>
