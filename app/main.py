@@ -1,21 +1,19 @@
-from app import models
-from app.database import engine, get_db
-from app.models import JobApplication
-
 from fastapi import Depends, FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from pydantic import BaseModel
+from app import models, crud
+from app.database import engine, get_db
 
 
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
-app.mount('/static', StaticFiles(directory='app/static'), name='static')
-templates = Jinja2Templates(directory='app/templates')
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
 
 # -------------------------
@@ -28,7 +26,7 @@ class JobApplicationOut(BaseModel):
     status: str
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # allows returning SQLAlchemy objects directly
 
 
 class JobApplicationCreate(BaseModel):
@@ -46,106 +44,86 @@ class JobApplicationUpdate(BaseModel):
 # -------------------------
 # HTML Routes (UI)
 # -------------------------
-@app.get('/', response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
-    job_applications = (
-        db.query(JobApplication)
-        .order_by(JobApplication.id.desc())
-        .all()
-    )
-
+    job_applications = crud.get_applications(db)
     return templates.TemplateResponse(
-        'index.html',
-        {
-            'request': request, 
-            'job_applications': job_applications
-        },
+        "index.html",
+        {"request": request, "job_applications": job_applications},
     )
 
 
-@app.post('/applications')
+@app.post("/applications")
 def add_application(
     company: str = Form(...),
     role: str = Form(...),
     status: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    app_row = JobApplication(company=company, role=role, status=status)
-    db.add(app_row)
-    db.commit()
-    return RedirectResponse(url='/', status_code=303)
+    crud.create_application(db, company=company, role=role, status=status)
+    return RedirectResponse(url="/", status_code=303)
 
 
-@app.post('/applications/{app_id}/status')
-def update_application_status_ui(
+@app.post("/applications/{app_id}/edit")
+def update_application_ui(
     app_id: int,
+    company: str = Form(...),
+    role: str = Form(...),
     status: str = Form(...),
     db: Session = Depends(get_db),
-): 
-    row = db.get(JobApplication, app_id)
-    if row is None:
-        return RedirectResponse(url='/', status_code=303)
-    
-    row.status = status
-    db.commit()
-    return RedirectResponse(url='/', status_code=303)
+):
+    row = crud.update_application(
+        db,
+        app_id=app_id,
+        company=company,
+        role=role,
+        status=status,
+    )
+    # UI: simple redirect even if missing
+    return RedirectResponse(url="/", status_code=303)
 
 
-@app.post('/applications/{app_id}/delete')
+@app.post("/applications/{app_id}/delete")
 def delete_application_ui(app_id: int, db: Session = Depends(get_db)):
-    row = db.get(JobApplication, app_id)
-    if row is None:
-        return RedirectResponse(url='/', status_code=303)
-    
-    db.delete(row)
-    db.commit()
-    return RedirectResponse(url='/', status_code=303)
+    crud.delete_application(db, app_id=app_id)
+    return RedirectResponse(url="/", status_code=303)
 
 
 # -------------------------
 # API Routes (JSON)
 # -------------------------
-@app.get('/api/applications', response_model=list[JobApplicationOut])
+@app.get("/api/applications", response_model=list[JobApplicationOut])
 def api_list_applications(db: Session = Depends(get_db)):
-    return (
-        db.query(JobApplication)
-        .order_by(JobApplication.id.desc())
-        .all()
-    )
+    return crud.get_applications(db)
+
 
 @app.post("/api/applications", response_model=JobApplicationOut, status_code=201)
 def api_create_application(payload: JobApplicationCreate, db: Session = Depends(get_db)):
-    row = JobApplication(company=payload.company, role=payload.role, status=payload.status)
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return row
+    return crud.create_application(
+        db,
+        company=payload.company,
+        role=payload.role,
+        status=payload.status,
+    )
 
 
 @app.patch("/api/applications/{app_id}", response_model=JobApplicationOut)
 def api_update_application(app_id: int, payload: JobApplicationUpdate, db: Session = Depends(get_db)):
-    row = db.get(JobApplication, app_id)
+    row = crud.update_application(
+        db,
+        app_id=app_id,
+        company=payload.company,
+        role=payload.role,
+        status=payload.status,
+    )
     if row is None:
         raise HTTPException(status_code=404, detail="Application not found")
-
-    if payload.company is not None:
-        row.company = payload.company
-    if payload.role is not None:
-        row.role = payload.role
-    if payload.status is not None:
-        row.status = payload.status
-
-    db.commit()
-    db.refresh(row)
     return row
 
 
 @app.delete("/api/applications/{app_id}", status_code=204)
 def api_delete_application(app_id: int, db: Session = Depends(get_db)):
-    row = db.get(JobApplication, app_id)
-    if row is None:
+    ok = crud.delete_application(db, app_id=app_id)
+    if not ok:
         raise HTTPException(status_code=404, detail="Application not found")
-
-    db.delete(row)
-    db.commit()
     return None

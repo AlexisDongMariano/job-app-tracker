@@ -1,6 +1,11 @@
-from sqlalchemy import Integer, String
+from datetime import datetime, timezone
+
+from sqlalchemy import Integer, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
+
+def utcnow():
+    return datetime.now(timezone.utc)
 
 
 class JobApplication(Base):

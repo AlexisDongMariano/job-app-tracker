@@ -45,28 +45,33 @@
         {% else %}
         <ul>
             {% for app in job_applications %}
-            <li style="margin-bottom: 12px;">
-                <strong>{{ app.company }}</strong> — {{ app.role }}
-                <em>({{ app.status }})</em>
+            <li style="margin-bottom: 16px;">
+                <form method="post" action="/applications/{{ app.id }}/edit" style="display:inline;">
 
-                <form method="post" action="/applications/{{ app.id }}/status" style="display:inline;">
+                    <input type="hidden" name="id" value="{{ app.id }}">
+
+                    <input type="text" name="company" value="{{ app.company }}" aria-label="Company name" required />
+
+                    <input type="text" name="role" value="{{ app.role }}" aria-label="Job role" required />
+
                     <select name="status">
                         <option {% if app.status=="Applied" %}selected{% endif %}>Applied</option>
                         <option {% if app.status=="Interview" %}selected{% endif %}>Interview</option>
                         <option {% if app.status=="Offer" %}selected{% endif %}>Offer</option>
                         <option {% if app.status=="Rejected" %}selected{% endif %}>Rejected</option>
                     </select>
-                    <button type="submit">Update</button>
+
+                    <button type="submit">Save</button>
                 </form>
 
                 <form method="post" action="/applications/{{ app.id }}/delete"
-                    style="display:inline; margin-left: 6px;">
+                    style="display:inline; margin-left: 8px;">
                     <button type="submit">Delete</button>
                 </form>
             </li>
-
             {% endfor %}
         </ul>
+
         {% endif %}
     </main>
 </body>
