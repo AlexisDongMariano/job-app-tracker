@@ -1,5 +1,7 @@
+from datetime import datetime
 from enum import Enum
 from fastapi import Depends, FastAPI, Form, Request, HTTPException
+from fastapi import Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -32,8 +34,8 @@ class JobApplicationOut(BaseModel):
     company: str
     role: str
     status: JobStatus
-    created_at: str
-    updated_at: str    
+    created_at: datetime
+    updated_at: datetime  
 
     class Config:
         from_attributes = True  # allows returning SQLAlchemy objects directly
@@ -49,6 +51,14 @@ class JobApplicationUpdate(BaseModel):
     company: str | None = None
     role: str | None = None
     status: JobStatus | None = None
+
+
+class PaginatedJobApplications(BaseModel):
+    items: list[JobApplicationOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 # -------------------------
@@ -107,6 +117,25 @@ def api_list_applications(db: Session = Depends(get_db)):
     return crud.get_applications(db)
 
 
+@app.get('/api/applications/paged', response_model=PaginatedJobApplications)
+def api_list_applications_paged(
+    db: Session = Depends(get_db),
+    limit: int = Query(10, ge=1, le=100, description='Number of items to return'),
+    offset: int = Query(0, ge=0, description='Number of items to skip'),
+):
+    total = crud.count_applications(db)
+    items = crud.get_applications_page(db, limit=limit, offset=offset)
+    has_more = (offset + limit) < total
+
+    return {
+        'items': items,
+        'total': total,
+        'limit': limit,
+        'offset': offset,
+        'has_more': has_more,
+    }
+
+
 @app.post("/api/applications", response_model=JobApplicationOut, status_code=201)
 def api_create_application(payload: JobApplicationCreate, db: Session = Depends(get_db)):
     return crud.create_application(
@@ -137,3 +166,6 @@ def api_delete_application(app_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Application not found")
     return None
+
+
+

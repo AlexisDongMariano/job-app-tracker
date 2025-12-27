@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import JobApplication
@@ -50,3 +51,16 @@ def delete_application(db: Session, app_id: int) -> bool:
     db.delete(row)
     db.commit()
     return True
+
+
+def count_applications(db: Session) -> int:
+    return db.query(func.count(JobApplication.id)).scalar() or 0
+
+def get_applications_page(db: Session, *, limit: int, offset: int):
+    return (
+        db.query(JobApplication)
+        .order_by(JobApplication.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
