@@ -1,3 +1,4 @@
+from enum import Enum
 from fastapi import Depends, FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,11 +20,20 @@ templates = Jinja2Templates(directory="app/templates")
 # -------------------------
 # Pydantic Schemas (API)
 # -------------------------
+class JobStatus(str, Enum):
+    Applied = 'Applied'
+    Interview = 'Interview'
+    Offer = 'Offer'
+    Rejected = 'Rejected'
+
+
 class JobApplicationOut(BaseModel):
     id: int
     company: str
     role: str
-    status: str
+    status: JobStatus
+    created_at: str
+    updated_at: str    
 
     class Config:
         from_attributes = True  # allows returning SQLAlchemy objects directly
@@ -32,13 +42,13 @@ class JobApplicationOut(BaseModel):
 class JobApplicationCreate(BaseModel):
     company: str
     role: str
-    status: str
+    status: JobStatus
 
 
 class JobApplicationUpdate(BaseModel):
     company: str | None = None
     role: str | None = None
-    status: str | None = None
+    status: JobStatus | None = None
 
 
 # -------------------------
