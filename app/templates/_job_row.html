@@ -1,0 +1,36 @@
+<li id="job-{{ app.id }}" style="margin-bottom: 16px;">
+  <form
+    method="post"
+    action="/applications/{{ app.id }}/edit"
+    hx-post="/applications/{{ app.id }}/edit"
+    hx-target="#job-{{ app.id }}"
+    hx-swap="outerHTML"
+    style="display:inline;"
+  >
+    <input type="text" name="company" value="{{ app.company }}" required />
+    <input type="text" name="role" value="{{ app.role }}" required />
+
+    <select name="status">
+      <option {% if app.status=="Applied" %}selected{% endif %}>Applied</option>
+      <option {% if app.status=="Interview" %}selected{% endif %}>Interview</option>
+      <option {% if app.status=="Offer" %}selected{% endif %}>Offer</option>
+      <option {% if app.status=="Rejected" %}selected{% endif %}>Rejected</option>
+    </select>
+
+    <button type="submit">Save</button>
+  </form>
+
+  <button
+    hx-post="/applications/{{ app.id }}/delete"
+    hx-target="#job-{{ app.id }}"
+    hx-swap="outerHTML"
+    style="margin-left: 8px;"
+  >
+    Delete
+  </button>
+
+  <small style="display:block; margin-top:6px; color:#666;">
+    Created: {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}
+    | Updated: {{ app.updated_at.strftime('%Y-%m-%d %H:%M') }}
+  </small>
+</li>

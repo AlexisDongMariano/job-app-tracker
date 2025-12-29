@@ -22,3 +22,9 @@ job-type
 
 salary (annual) - opt
 location - opt
+
+
+
+htmx
+tailwind
+sort functionality

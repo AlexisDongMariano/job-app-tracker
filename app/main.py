@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from fastapi import Depends, FastAPI, Form, Request, HTTPException
 from fastapi import Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -87,6 +87,7 @@ def add_application(
 @app.post("/applications/{app_id}/edit")
 def update_application_ui(
     app_id: int,
+    request: Request,
     company: str = Form(...),
     role: str = Form(...),
     status: str = Form(...),
@@ -99,13 +100,21 @@ def update_application_ui(
         role=role,
         status=status,
     )
-    # UI: simple redirect even if missing
+    # if HTMX request, return updated row HTML
+    if request.headers.get('hx-request') == 'true' and row is not None:
+        return templates.TemplateResponse('_job_row.html', {'request': request, 'app': row})
+    # Normal browser form fallback
     return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/applications/{app_id}/delete")
-def delete_application_ui(app_id: int, db: Session = Depends(get_db)):
+def delete_application_ui(app_id: int, request: Request, db: Session = Depends(get_db)):
     crud.delete_application(db, app_id=app_id)
+
+    # HTMX: return empty response so outerHTML swap removes the row
+    if request.headers.get("hx-request") == "true":
+        return Response(content="", status_code=200)
+
     return RedirectResponse(url="/", status_code=303)
 
 

@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" , initial-scale="1">
     <title>Job App Tracker</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 
 <body>
@@ -45,35 +46,7 @@
         {% else %}
         <ul>
             {% for app in job_applications %}
-            <li style="margin-bottom: 16px;">
-                <form method="post" action="/applications/{{ app.id }}/edit" style="display:inline;">
-
-                    <input type="hidden" name="id" value="{{ app.id }}">
-
-                    <input type="text" name="company" value="{{ app.company }}" aria-label="Company name" required />
-
-                    <input type="text" name="role" value="{{ app.role }}" aria-label="Job role" required />
-
-                    <select name="status">
-                        <option {% if app.status=="Applied" %}selected{% endif %}>Applied</option>
-                        <option {% if app.status=="Interview" %}selected{% endif %}>Interview</option>
-                        <option {% if app.status=="Offer" %}selected{% endif %}>Offer</option>
-                        <option {% if app.status=="Rejected" %}selected{% endif %}>Rejected</option>
-                    </select>
-                    <button type="submit">Save</button>
-                </form>
-
-
-                <form method="post" action="/applications/{{ app.id }}/delete"
-                    style="display:inline; margin-left: 8px;">
-                    <button type="submit">Delete</button>
-                </form>
-
-                <small style="display:block; margin-top:6px; color:#666;">
-                    Created: {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}
-                    | Updated: {{ app.updated_at.strftime('%Y-%m-%d %H:%M') }}
-                </small>
-            </li>
+                {% include "_job_row.html" %}
             {% endfor %}
         </ul>
 
