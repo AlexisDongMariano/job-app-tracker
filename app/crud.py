@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models import JobApplication
@@ -54,22 +54,35 @@ def delete_application(db: Session, app_id: int) -> bool:
 
 
 ##############
-def count_applications(db: Session, status: str | None = None) -> int:
-    q = db.query(func.count(JobApplication.id))
+def _apply_filters(qry, *, status: str | None, q: str | None):
     if status is not None:
-        q = q.filter(JobApplication.status == status)
-    return q.scalar() or 0
+        qry = qry.filter(JobApplication.status == status)
+
+    if q is not None and q.strip():
+        term = f'%{q.strip()}%'
+        qry = qry.filter(
+            or_(
+                JobApplication.company.ilike(term),
+                JobApplication.role.ilike(term),
+            )
+        )
+    return qry
+    
+
+def count_applications(db: Session, *, status: str | None = None, q: str | None = None) -> int:
+    qry = db.query(func.count(JobApplication.id))
+    qry = _apply_filters(qry, status=status, q=q)
+    return qry.scalar() or 0
 
 
 def get_applications_page(
-        db: Session, 
-        *, 
-        limit: int,
-        offset: int,
-        status: str | None = None,
-    ):
-    q = db.query(JobApplication).order_by(JobApplication.id.desc())
-    if status is not None:
-        q = q.filter(JobApplication.status == status)
-    
-    return q.offset(offset).limit(limit).all() 
+    db: Session,
+    *,
+    limit: int,
+    offset: int,
+    status: str | None = None,
+    q: str | None = None,
+):
+    qry = db.query(JobApplication).order_by(JobApplication.id.desc())
+    qry = _apply_filters(qry, status=status, q=q)
+    return qry.offset(offset).limit(limit).all()
