@@ -53,14 +53,23 @@ def delete_application(db: Session, app_id: int) -> bool:
     return True
 
 
-def count_applications(db: Session) -> int:
-    return db.query(func.count(JobApplication.id)).scalar() or 0
+##############
+def count_applications(db: Session, status: str | None = None) -> int:
+    q = db.query(func.count(JobApplication.id))
+    if status is not None:
+        q = q.filter(JobApplication.status == status)
+    return q.scalar() or 0
 
-def get_applications_page(db: Session, *, limit: int, offset: int):
-    return (
-        db.query(JobApplication)
-        .order_by(JobApplication.id.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+
+def get_applications_page(
+        db: Session, 
+        *, 
+        limit: int,
+        offset: int,
+        status: str | None = None,
+    ):
+    q = db.query(JobApplication).order_by(JobApplication.id.desc())
+    if status is not None:
+        q = q.filter(JobApplication.status == status)
+    
+    return q.offset(offset).limit(limit).all() 

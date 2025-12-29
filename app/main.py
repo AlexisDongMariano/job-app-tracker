@@ -122,9 +122,11 @@ def api_list_applications_paged(
     db: Session = Depends(get_db),
     limit: int = Query(10, ge=1, le=100, description='Number of items to return'),
     offset: int = Query(0, ge=0, description='Number of items to skip'),
+    status: JobStatus | None = Query(None, description='Filter by application status'),
 ):
-    total = crud.count_applications(db)
-    items = crud.get_applications_page(db, limit=limit, offset=offset)
+    status_value = status.value if status is not None else None
+    total = crud.count_applications(db, status=status_value)
+    items = crud.get_applications_page(db, limit=limit, offset=offset, status=status_value)
     has_more = (offset + limit) < total
 
     return {
