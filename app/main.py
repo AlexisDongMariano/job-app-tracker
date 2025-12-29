@@ -64,27 +64,34 @@ class PaginatedJobApplications(BaseModel):
 # -------------------------
 # HTML Routes (UI)
 # -------------------------
-@app.get("/", response_class=HTMLResponse)
+@app.get('/', response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
     job_applications = crud.get_applications(db)
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "job_applications": job_applications},
+        'index.html',
+        {'request': request, 'job_applications': job_applications},
     )
 
 
-@app.post("/applications")
+@app.post('/applications')
 def add_application(
+    request: Request,
     company: str = Form(...),
     role: str = Form(...),
     status: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    crud.create_application(db, company=company, role=role, status=status)
-    return RedirectResponse(url="/", status_code=303)
+    row = crud.create_application(db, company=company, role=role, status=status)
+
+    # HTMX request: return just the new row HTML so it can be inserted into the list
+    if request.headers.get('hx-request') == 'true':
+        return templates.TemplateResponse('_job_row.html', {'request': request, 'app': row})
+
+    # Normal browser fallback
+    return RedirectResponse(url='/', status_code=303)
 
 
-@app.post("/applications/{app_id}/edit")
+@app.post('/applications/{app_id}/edit')
 def update_application_ui(
     app_id: int,
     request: Request,
@@ -107,21 +114,21 @@ def update_application_ui(
     return RedirectResponse(url="/", status_code=303)
 
 
-@app.post("/applications/{app_id}/delete")
+@app.post('/applications/{app_id}/delete')
 def delete_application_ui(app_id: int, request: Request, db: Session = Depends(get_db)):
     crud.delete_application(db, app_id=app_id)
 
     # HTMX: return empty response so outerHTML swap removes the row
-    if request.headers.get("hx-request") == "true":
-        return Response(content="", status_code=200)
+    if request.headers.get('hx-request') == 'true':
+        return Response(content='', status_code=200)
 
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url='/', status_code=303)
 
 
 # -------------------------
 # API Routes (JSON)
 # -------------------------
-@app.get("/api/applications", response_model=list[JobApplicationOut])
+@app.get('/api/applications', response_model=list[JobApplicationOut])
 def api_list_applications(db: Session = Depends(get_db)):
     return crud.get_applications(db)
 
@@ -148,7 +155,7 @@ def api_list_applications_paged(
     }
 
 
-@app.post("/api/applications", response_model=JobApplicationOut, status_code=201)
+@app.post('/api/applications', response_model=JobApplicationOut, status_code=201)
 def api_create_application(payload: JobApplicationCreate, db: Session = Depends(get_db)):
     return crud.create_application(
         db,
@@ -158,7 +165,7 @@ def api_create_application(payload: JobApplicationCreate, db: Session = Depends(
     )
 
 
-@app.patch("/api/applications/{app_id}", response_model=JobApplicationOut)
+@app.patch('/api/applications/{app_id}', response_model=JobApplicationOut)
 def api_update_application(app_id: int, payload: JobApplicationUpdate, db: Session = Depends(get_db)):
     row = crud.update_application(
         db,
@@ -168,15 +175,15 @@ def api_update_application(app_id: int, payload: JobApplicationUpdate, db: Sessi
         status=payload.status,
     )
     if row is None:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail='Application not found')
     return row
 
 
-@app.delete("/api/applications/{app_id}", status_code=204)
+@app.delete('/api/applications/{app_id}', status_code=204)
 def api_delete_application(app_id: int, db: Session = Depends(get_db)):
     ok = crud.delete_application(db, app_id=app_id)
     if not ok:
-        raise HTTPException(status_code=404, detail="Application not found")
+        raise HTTPException(status_code=404, detail='Application not found')
     return None
 
 

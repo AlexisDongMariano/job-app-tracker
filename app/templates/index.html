@@ -13,7 +13,8 @@
 
         <h2>Add application</h2>
 
-        <form method="post" action="/applications">
+        <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
+            hx-on:htmx:afterRequest="this.reset()">
             <div>
                 <label>Company</label><br />
                 <input type="text" name="company" required />
@@ -44,7 +45,7 @@
         {% if job_applications|length == 0 %}
         <p><em>No applications yet.</em></p>
         {% else %}
-        <ul>
+        <ul id="job-list">
             {% for app in job_applications %}
                 {% include "_job_row.html" %}
             {% endfor %}
