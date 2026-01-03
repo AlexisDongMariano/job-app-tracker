@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Integer, String, DateTime
+from sqlalchemy import Integer, String, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -11,6 +11,9 @@ def utcnow():
 
 class JobApplication(Base):
     __tablename__ = 'job_applications'
+    __table_args__ = (
+        UniqueConstraint('company', 'role', name='uq_company_role'),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     company: Mapped[str] = mapped_column(String, nullable=False)

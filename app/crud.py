@@ -13,6 +13,14 @@ def get_applications(db: Session):
 
 
 def create_application(db: Session, company: str, role: str, status: str) -> JobApplication:
+    existing = (
+        db.query(JobApplication)
+        .filter(JobApplication.company == company, JobApplication.role == role)
+        .first()
+    )
+    if existing:
+        raise ValueError('The company + role already exists.')
+
     row = JobApplication(company=company, role=role, status=status)
     db.add(row)
     db.commit()

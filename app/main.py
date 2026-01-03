@@ -73,7 +73,29 @@ def index(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@app.post('/applications')
+# @app.post('/applications')
+# def add_application(
+#     request: Request,
+#     company: str = Form(...),
+#     role: str = Form(...),
+#     status: str = Form(...),
+#     db: Session = Depends(get_db),
+# ):
+#     try:
+#         row = crud.create_application(db, company=company, role=role, status=status)
+#     except ValueError as e:
+#         if request.headers.get('hx-request') == 'true':
+#             return HTMLResponse(str(e), status_code=400)
+#         raise
+
+#     # HTMX request: return just the new row HTML so it can be inserted into the list
+#     if request.headers.get('hx-request') == 'true':
+#         return templates.TemplateResponse('_job_row.html', {'request': request, 'app': row})
+
+#     # Normal browser fallback
+#     return RedirectResponse(url='/', status_code=303)
+
+@app.post("/applications")
 def add_application(
     request: Request,
     company: str = Form(...),
@@ -81,14 +103,28 @@ def add_application(
     status: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    row = crud.create_application(db, company=company, role=role, status=status)
+    try:
+        row = crud.create_application(db, company=company, role=role, status=status)
+    except ValueError as e:
+        # HTMX: put the error into #add-error instead of the job list
+        if request.headers.get("hx-request") == "true":
+            return HTMLResponse(
+                str(e),
+                status_code=200,
+                headers={
+                    "HX-Retarget": "#add-error",
+                    "HX-Reswap": "innerHTML",
+                    
+                },
+            )
+        return RedirectResponse(url="/", status_code=303)
 
-    # HTMX request: return just the new row HTML so it can be inserted into the list
-    if request.headers.get('hx-request') == 'true':
-        return templates.TemplateResponse('_job_row.html', {'request': request, 'app': row})
+    # HTMX success: return the new row partial to insert into #job-list
+    if request.headers.get("hx-request") == "true":
+        return templates.TemplateResponse("_job_row.html", {"request": request, "app": row})
 
-    # Normal browser fallback
-    return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url="/", status_code=303)
+
 
 
 @app.post('/applications/{app_id}/edit')

@@ -13,16 +13,29 @@
 
         <h2>Add application</h2>
 
-        <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
-            hx-on:htmx:afterRequest="this.reset()">
+        <div id="add-error" style="color: #b00020; margin-bottom: 8px;"></div>
+
+        <!-- <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
+            hx-on:htmx:afterRequest="this.reset()"
+            hx-on:htmx:responseError="document.querySelector('#add-error').innerHTML = event.detail.xhr.responseText"> -->
+        <form
+            method="post"
+            action="/applications"
+            hx-post="/applications"
+            hx-target="#job-list"
+            hx-swap="afterbegin"
+            hx-on:htmx:beforeRequest="document.querySelector('#add-error').innerHTML=''"
+            hx-on:htmx:afterRequest="if(event.detail.successful) this.reset()"
+        >
+
             <div>
                 <label>Company</label><br />
-                <input type="text" name="company" required />
+                <input type="text" name="company" oninput="document.querySelector('#add-error').innerHTML=''" required />
             </div>
 
             <div>
                 <label>Role</label><br />
-                <input type="text" name="role" required />
+                <input type="text" name="role" oninput="document.querySelector('#add-error').innerHTML=''" required />
             </div>
 
             <div>
@@ -47,7 +60,7 @@
         {% else %}
         <ul id="job-list">
             {% for app in job_applications %}
-                {% include "_job_row.html" %}
+            {% include "_job_row.html" %}
             {% endfor %}
         </ul>
 
