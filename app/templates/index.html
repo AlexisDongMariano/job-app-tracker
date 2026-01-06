@@ -4,53 +4,74 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" , initial-scale="1">
     <title>Job App Tracker</title>
+
+    
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 
-<body>
-    <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;">
-        <h1>Job Application Tracker</h1>
+<body class="bg-gray-100 min-h-screen" hx-indicator="#loading">
+    <!-- <main style="max-width: 800px; margin: 40px auto; font-family: system-ui;"> -->
+    <main class="max-w-3xl mx-auto p-6 bg-white mt-10 rounded-lg shadow">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">Job Application Tracker</h1>
 
-        <h2>Add application</h2>
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add application</h2>
+        </section>
 
         <div id="add-error" style="color: #b00020; margin-bottom: 8px;"></div>
 
-        <!-- <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
-            hx-on:htmx:afterRequest="this.reset()"
-            hx-on:htmx:responseError="document.querySelector('#add-error').innerHTML = event.detail.xhr.responseText"> -->
-        <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
+        <!-- <form method="post" action="/applications" hx-post="/applications" 
+            hx-target="#job-list" hx-swap="afterbegin"
+            class="grid grid-cols-1 gap-4"
             hx-on:htmx:beforeRequest="document.querySelector('#add-error').innerHTML=''"
-            hx-on:htmx:afterRequest="if(event.detail.successful) this.reset()">
-
+            hx-on:htmx:afterRequest="if(event.detail.successful) this.reset()"> -->
+        <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
+            class="grid grid-cols-1 gap-4" hx-on:htmx:beforeRequest="document.querySelector('#add-error').innerHTML=''"
+            hx-on:htmx:afterRequest="
+                if(event.detail.successful) {
+                this.reset();
+                const empty = document.querySelector('#empty-state');
+                if (empty) empty.remove();
+                }
+            ">
             <div>
-                <label>Company</label><br />
-                <input type="text" name="company" oninput="document.querySelector('#add-error').innerHTML=''"
-                    required />
+                <label class="block text-sm font-medium text-gray-700">Company</label>
+                <input type="text" name="company" required class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+       focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                    oninput="document.querySelector('#add-error').innerHTML=''" />
             </div>
 
             <div>
-                <label>Role</label><br />
-                <input type="text" name="role" oninput="document.querySelector('#add-error').innerHTML=''" required />
+                <label class="block text-sm font-medium text-gray-700">Role</label>
+                <input type="text" name="role" required class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+       focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                    oninput="document.querySelector('#add-error').innerHTML=''" />
             </div>
 
             <div>
-                <label>Status</label><br />
-                <select name="status">
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                <select name="status" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+           focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30">
                     <option>Applied</option>
                     <option>Interview</option>
                     <option>Offer</option>
                     <option>Rejected</option>
                 </select>
+
             </div>
 
-            <button type="submit">Add</button>
+            <button type="submit"
+                class="inline-flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700">
+                Add</button>
         </form>
 
         <hr />
 
         <p>This will list your applications.</p>
 
-        <ul id="job-list">
+        <ul id="job-list" class="space-y-4">
             {% for app in job_applications %}
             {% include "_job_row.html" %}
             {% endfor %}
@@ -61,6 +82,28 @@
         {% endif %}
 
     </main>
+
+    <div
+        id="loading"
+        class="fixed top-4 right-4 hidden items-center gap-2 rounded bg-gray-800 px-3 py-2 text-white text-sm"
+        >
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        Working…
+    </div>
+
+    <script>
+        document.body.addEventListener("rowSaved", (e) => {
+            const row = e.target.closest("li");
+            if (!row) return;
+
+            row.classList.add("bg-green-50");
+            setTimeout(() => row.classList.remove("bg-green-50"), 800);
+        });
+    </script>
+
 </body>
 
 </html>

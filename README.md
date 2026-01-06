@@ -22,31 +22,3 @@ job-type
 
 salary (annual) - opt
 location - opt
-
-
-
-htmx - 
-Next, the most valuable “real app” upgrade is proper error handling + validation in HTMX, so you can show a message without a page reload when something goes wrong.
-
-A perfect example is preventing duplicates (same company + role), because it forces you to handle:
-
-DB constraints
-
-alembic
-
-API errors
-
-HTMX error rendering
-
-We’ll do it in small steps.
-
-tailwind
-sort functionality
-
-
-pip install alembic
-alembic init alembic
-
-alembic revision --autogenerate -m "initial schema"
-alembic upgrade head
-python -c "import sqlite3; conn=sqlite3.connect('app/data.db'); print(conn.execute(\"select name from sqlite_master where type='table'\").fetchall())"

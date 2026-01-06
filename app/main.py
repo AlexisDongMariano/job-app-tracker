@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from fastapi import Depends, FastAPI, Form, Request, HTTPException
+from fastapi import Depends, FastAPI, Form, Request, Response, HTTPException
 from fastapi import Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -145,7 +145,15 @@ def update_application_ui(
     )
     # if HTMX request, return updated row HTML
     if request.headers.get('hx-request') == 'true' and row is not None:
-        return templates.TemplateResponse('_job_row.html', {'request': request, 'app': row})
+        response = templates.TemplateResponse(
+            '_job_row.html',
+            {'request': request, 'app':row}
+        )
+
+        # Trigger the event AFTER the row is swapped
+        response.headers['HX-Trigger'] = 'rowSaved'
+        return response
+
     # Normal browser form fallback
     return RedirectResponse(url="/", status_code=303)
 
