@@ -18,19 +18,14 @@
         <!-- <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
             hx-on:htmx:afterRequest="this.reset()"
             hx-on:htmx:responseError="document.querySelector('#add-error').innerHTML = event.detail.xhr.responseText"> -->
-        <form
-            method="post"
-            action="/applications"
-            hx-post="/applications"
-            hx-target="#job-list"
-            hx-swap="afterbegin"
+        <form method="post" action="/applications" hx-post="/applications" hx-target="#job-list" hx-swap="afterbegin"
             hx-on:htmx:beforeRequest="document.querySelector('#add-error').innerHTML=''"
-            hx-on:htmx:afterRequest="if(event.detail.successful) this.reset()"
-        >
+            hx-on:htmx:afterRequest="if(event.detail.successful) this.reset()">
 
             <div>
                 <label>Company</label><br />
-                <input type="text" name="company" oninput="document.querySelector('#add-error').innerHTML=''" required />
+                <input type="text" name="company" oninput="document.querySelector('#add-error').innerHTML=''"
+                    required />
             </div>
 
             <div>
@@ -55,16 +50,16 @@
 
         <p>This will list your applications.</p>
 
-        {% if job_applications|length == 0 %}
-        <p><em>No applications yet.</em></p>
-        {% else %}
         <ul id="job-list">
             {% for app in job_applications %}
             {% include "_job_row.html" %}
             {% endfor %}
         </ul>
 
+        {% if job_applications|length == 0 %}
+        <p id="empty-state"><em>No applications yet.</em></p>
         {% endif %}
+
     </main>
 </body>
 
