@@ -1,0 +1,373 @@
+1) activate python environment
+2) start docker service
+sudo systemctl start docker
+sudo systemctl enable docker
+3) run application
+uvicorn app.main:app --reload
+
+
+
+htmx - 
+Next, the most valuable “real app” upgrade is proper error handling + validation in HTMX, so you can show a message without a page reload when something goes wrong.
+
+A perfect example is preventing duplicates (same company + role), because it forces you to handle:
+
+DB constraints
+
+alembic
+
+API errors
+
+HTMX error rendering
+
+We’ll do it in small steps.
+
+tailwind
+sort functionality
+
+
+pip install alembic
+alembic init alembic
+
+alembic revision --autogenerate -m "initial schema"
+alembic upgrade head
+python -c "import sqlite3; conn=sqlite3.connect('app/data.db'); print(conn.execute(\"select name from sqlite_master where type='table'\").fetchall())"
+
+
+
+
+
+sudo apt update
+sudo apt install -y docker-compose-plugin
+
+
+
+#######################################
+#   using postgres database in docker #
+#######################################
+What happens to data in Postgres (Docker)?
+
+Postgres data will be stored in a Docker volume, so it persists across container restarts (as long as you define a volume in docker-compose.yml).
+
+Typical compose example:
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: jobtracker
+      POSTGRES_PASSWORD: jobtracker
+      POSTGRES_DB: jobtracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+
+
+docker compose down → container stops, data stays (volume stays)
+
+docker compose down -v → deletes the volume → data is wiped
+
+The one thing you must do when switching to Postgres
+
+You need to run migrations against Postgres once:
+
+Start Postgres:
+
+docker compose up -d
+
+
+Set Postgres URL (example):
+
+export DATABASE_URL="postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker"
+
+
+Run migrations (creates tables in Postgres):
+
+alembic upgrade head
+
+
+Run app in the same env:
+
+uvicorn app.main:app --reload
+
+
+Quick “it worked” checks
+Check tables exist in Postgres
+
+Run:
+
+docker exec -it jobtracker-db psql -U jobtracker -d jobtracker -c "\dt"
+
+Add an application in the UI
+
+Then (optional) verify row count in Postgres:
+
+docker exec -it jobtracker-db psql -U jobtracker -d jobtracker -c "select count(*) from job_applications;
+
+#######################################
+# migrating sqlite to postgres docker #
+#######################################
+0) Preconditions
+
+Postgres container is running (via docker-compose)
+
+Your Postgres database has tables created (run once):
+
+export DATABASE_URL="postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker"
+alembic upgrade head
+
+
+Install Postgres driver in your venv:
+
+pip install "psycopg[binary]"
+
+1) Create script: scripts/migrate_sqlite_to_postgres.py
+
+Make a folder scripts/ and create the file below.
+
+import os
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
+# Import your existing SQLAlchemy model
+from app.models import JobApplication
+
+
+def parse_sqlite_url(sqlite_path: str) -> str:
+    """
+    Convert a filesystem path to a SQLAlchemy SQLite URL.
+    Example: app/data.db -> sqlite:///./app/data.db
+    """
+    # If user already passed a sqlite:/// URL, keep it.
+    if sqlite_path.startswith("sqlite:"):
+        return sqlite_path
+    # Use relative path form so it matches your project layout.
+    return f"sqlite:///./{sqlite_path.lstrip('./')}"
+
+
+def main() -> None:
+    # --- Configure sources/targets ---
+    sqlite_path = os.getenv("SQLITE_PATH", "app/data.db")
+    sqlite_url = parse_sqlite_url(sqlite_path)
+
+    postgres_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
+    if not postgres_url:
+        raise SystemExit(
+            "Missing POSTGRES_URL (or DATABASE_URL). Example:\n"
+            'export POSTGRES_URL="postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker"'
+        )
+
+    # If you want to keep the same IDs from SQLite, set PRESERVE_IDS=1
+    preserve_ids = os.getenv("PRESERVE_IDS", "0") == "1"
+
+    print("SQLite URL:   ", sqlite_url)
+    print("Postgres URL: ", postgres_url)
+    print("Preserve IDs: ", preserve_ids)
+
+    sqlite_engine = create_engine(sqlite_url, future=True)
+    pg_engine = create_engine(postgres_url, future=True)
+
+    # --- Read from SQLite ---
+    with Session(sqlite_engine) as s_src:
+        rows = s_src.execute(select(JobApplication)).scalars().all()
+
+    print(f"Found {len(rows)} rows in SQLite.")
+
+    inserted = 0
+    skipped = 0
+
+    # --- Write to Postgres ---
+    with Session(pg_engine) as s_dst:
+        for r in rows:
+            # Skip if the row already exists in Postgres (by unique constraint company+role)
+            exists = s_dst.execute(
+                select(JobApplication.id).where(
+                    JobApplication.company == r.company,
+                    JobApplication.role == r.role,
+                )
+            ).first()
+
+            if exists:
+                skipped += 1
+                continue
+
+            # Create a new object for Postgres
+            new_obj = JobApplication(
+                company=r.company,
+                role=r.role,
+                status=r.status,
+                created_at=r.created_at,
+                updated_at=r.updated_at,
+            )
+
+            # Optional: preserve original primary key
+            if preserve_ids:
+                new_obj.id = r.id
+
+            s_dst.add(new_obj)
+
+        # One commit at end is simplest; if you have lots of rows, you can batch.
+        s_dst.commit()
+
+        # Count inserted rows (best effort)
+        # Note: inserted/skipped counts are accurate based on our loop.
+        inserted = len(rows) - skipped
+
+    print(f"Done. Inserted={inserted}, Skipped(duplicates)={skipped}")
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+    adm-admin@NA-PW00TD61-LTC:~/projects/job-app-tracker$ alembic upgrade head
+DATABASE_URL = postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker
+ENGINE DB   = postgresql+psycopg://jobtracker:***@localhost:5432/jobtracker
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 89a859ac6a19, initial schema
+adm-admin@NA-PW00TD61-LTC:~/projects/job-app-tracker$ uvicorn app.main:app --reload
+INFO:     Will watch for changes in these directories: ['/home/adm-admin/projects/job-app-tracker']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [53770] using StatReload
+DATABASE_URL = postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker
+ENGINE DB   = postgresql+psycopg://jobtracker:***@localhost:5432/jobtracker
+
+
+=========================
+okay, db is now using the postgres in docker, what's next
+
+Nice — at this point you’ve hit a big milestone:
+
+✅ Alembic migrations working
+✅ App talking to Postgres (Docker) via DATABASE_URL
+✅ HTMX UI + API still function
+
+Next best step is to make this “production-style” in the ways that matter most for CI/CD and real deployments.
+
+Next steps (in the best order)
+1) Make configuration “deployment-ready”
+
+Right now you’re probably exporting DATABASE_URL in your shell. In CI/CD and servers, you want repeatable config.
+
+Do this
+
+Create a .env file (for local dev) and load it in docker compose / uvicorn.
+
+Example .env:
+
+DATABASE_URL=postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker
+
+
+Then in your workflow you can do:
+
+set -a && source .env && set +a
+uvicorn app.main:app --reload
+
+
+Why this matters: your deploy pipeline can set env vars cleanly, without manual steps.
+
+2) Add a “health check” endpoint (CI/CD-friendly)
+
+This is a modern must-have for deployments, load balancers, uptime monitors.
+
+Add to app/main.py:
+
+from fastapi import Depends
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from app.database import get_db
+
+@app.get("/healthz")
+def healthz(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"status": "ok"}
+
+
+Why: CI/CD can hit /healthz to confirm app + DB are healthy.
+
+3) Add automated tests (minimum viable)
+
+Before CI/CD, add 2–3 tests so your pipeline has something real to run.
+
+Modern minimal test stack
+
+pytest
+
+httpx (test client)
+
+Use a separate test DB (or SQLite in-memory just for tests)
+
+Install:
+
+pip install pytest httpx
+
+
+Add a test like:
+
+test_healthz_ok
+
+test_create_application
+
+test_duplicate_company_role_returns_400
+
+4) Add pre-commit / linting (quick win)
+
+This makes your CI clean and professional.
+
+Recommended:
+
+ruff (lint + formatting)
+
+optionally mypy later
+
+Install:
+
+pip install ruff
+
+
+Add pyproject.toml minimal config for ruff.
+
+5) Add a simple CI pipeline (GitHub Actions)
+
+Once tests + ruff exist, CI is straightforward:
+
+Pipeline steps:
+
+checkout
+
+setup python
+
+install deps
+
+run ruff
+
+run pytest
+
+(We can add Postgres service in Actions later.)
+
+My recommendation for your next step
+
+Do #2 Health Check first (5 minutes), then #3 minimal tests (30–60 minutes), then CI.
+
+This gives you a very credible “CI/CD ready backend” story.
+
+Pick one and I’ll give exact files/commands
+
+A) Health check + DB ping
+B) Minimal pytest setup (with test DB strategy)
+C) Ruff formatting + linting setup
+D) GitHub Actions CI yaml
+
+If you say “A”, I’ll tell you exactly where to paste the code and how to verify it with curl.
