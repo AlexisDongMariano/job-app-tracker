@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import models, crud
@@ -230,5 +231,10 @@ def api_delete_application(app_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail='Application not found')
     return None
 
+
+@app.get('/health')
+def health(db: Session = Depends(get_db)):
+    db.execute(text('SELECT 1'))
+    return {'status': 'ok'}
 
 
