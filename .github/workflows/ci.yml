@@ -25,7 +25,7 @@ jobs:
                     --health-retries=5
         
         env:
-            DATABASE_URL: postgresql://jobtracker:jobtracker@localhost:5432/jobtracker
+            DATABASE_URL: postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker
         
         
         steps:
