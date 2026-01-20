@@ -5,7 +5,7 @@ from fastapi import Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -31,15 +31,14 @@ class JobStatus(str, Enum):
 
 
 class JobApplicationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)  # allows returning SQLAlchemy objects directly
+    
     id: int
     company: str
     role: str
     status: JobStatus
     created_at: datetime
-    updated_at: datetime  
-
-    class Config:
-        from_attributes = True  # allows returning SQLAlchemy objects directly
+    updated_at: datetime
 
 
 class JobApplicationCreate(BaseModel):
