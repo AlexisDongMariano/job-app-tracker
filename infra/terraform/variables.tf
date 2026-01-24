@@ -23,3 +23,8 @@ variable "vm_name" {
     type = string
     default = "adm-1-vm"
 }
+
+variable "owner_email" {
+    description = "Owner of the resource"
+    type = string
+}
