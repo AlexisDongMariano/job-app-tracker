@@ -11,7 +11,7 @@ variable "location" {
 
 variable "vm_size" {
     type = string
-    default = "Standard_B1s"
+    default = "Standard_B1ms"
 }
 
 variable "admin_username" {
@@ -27,4 +27,16 @@ variable "vm_name" {
 variable "owner_email" {
     description = "Owner of the resource"
     type = string
+}
+
+variable "ssh_public_key" {
+    description = "SSH public key for VM access"
+    type = string
+    sensitive = true
+}
+
+variable "my_public_ip" {
+    description = "Your public IP address for NSG rules (use '*' for any IP, or specific IP like '1.2.3.4/32')"
+    type = string
+    default = "*"
 }
